@@ -16,11 +16,11 @@ public class BarCodeScannerAsyncTask extends android.os.AsyncTask<Void, Void, Re
 
   //  note(sjchmiela): From my short research it's ok to ignore rotation of the image.
   public BarCodeScannerAsyncTask(
-      BarCodeScannerAsyncTaskDelegate delegate,
-      MultiFormatReader multiFormatReader,
-      byte[] imageData,
-      int width,
-      int height
+          BarCodeScannerAsyncTaskDelegate delegate,
+          MultiFormatReader multiFormatReader,
+          byte[] imageData,
+          int width,
+          int height
   ) {
     mImageData = imageData;
     mWidth = width;
@@ -46,6 +46,26 @@ public class BarCodeScannerAsyncTask extends android.os.AsyncTask<Void, Void, Re
       t.printStackTrace();
     }
 
+    if (result == null) {
+      try {
+        int width = mHeight;
+        int height = mWidth;
+        byte[] rotatedData = new byte[mImageData.length];
+        for (int y = 0; y < width; y++) {
+          for (int x = 0; x < height; x++) {
+            rotatedData[x * width + width - y - 1] = mImageData[x + y * height];
+          }
+        }
+
+        BinaryBitmap rotatedBitmap = generateBitmapFromImageData(rotatedData, width, height);
+        result = mMultiFormatReader.decodeWithState(rotatedBitmap);
+      } catch (NotFoundException e) {
+        // No barcode found, result is already null.
+      } catch (Throwable t) {
+        t.printStackTrace();
+      }
+    }
+
     return result;
   }
 
@@ -60,14 +80,14 @@ public class BarCodeScannerAsyncTask extends android.os.AsyncTask<Void, Void, Re
 
   private BinaryBitmap generateBitmapFromImageData(byte[] imageData, int width, int height) {
     PlanarYUVLuminanceSource source = new PlanarYUVLuminanceSource(
-        imageData, // byte[] yuvData
-        width, // int dataWidth
-        height, // int dataHeight
-        0, // int left
-        0, // int top
-        width, // int width
-        height, // int height
-        false // boolean reverseHorizontal
+            imageData, // byte[] yuvData
+            width, // int dataWidth
+            height, // int dataHeight
+            0, // int left
+            0, // int top
+            width, // int width
+            height, // int height
+            false // boolean reverseHorizontal
     );
     return new BinaryBitmap(new HybridBinarizer(source));
   }
